@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>경모의 일기장</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #ff9a9e, #fad0c4, #fad0c4, #fbc2eb);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        header {
+            background: #ff6f91;
+            padding: 20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+            border-radius: 10px;
+        }
+        .buttons, .memo, .calendar, .chatbot, .share {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            width: 90%;
+            max-width: 600px;
+        }
+        .buttons button {
+            margin: 5px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #ff6f91;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .buttons button:hover {
+            background: #ff3c6f;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 1rem;
+        }
+        input[type="date"], input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+        }
+        .chatbox {
+            width: 100%;
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 10px;
+            background: #f9f9f9;
+            margin-bottom: 10px;
+        }
+        .chat-input {
+            display: flex;
+            gap: 5px;
+        }
+        .chat-input input {
+            flex: 1;
+        }
+        .chat-input button {
+            padding: 10px 20px;
+            border: none;
+            background: #ff6f91;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-top: 5px;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        경모의 일기장
+    </header>
+
+    <section class="buttons">
+        <button onclick="showCalendar()">클릭 1</button>
+        <button>클릭 2</button>
+        <button>클릭 3</button>
+        <button>클릭 4</button>
+    </section>
+
+    <section class="calendar" id="calendar" style="display: none;">
+        <h3>타임테이블</h3>
+        <input type="date">
+    </section>
+
+    <section class="memo">
+        <h3>메모 기능</h3>
+        <textarea placeholder="팔림을 남기세요..."></textarea>
+    </section>
+
+    <section class="chatbot">
+        <h3>채팅및 창고화</h3>
+        <div class="chatbox" id="chatbox"></div>
+        <div class="chat-input">
+            <input type="text" id="chatInput" placeholder="메시지 또는 URL 입력">
+            <button onclick="sendMessage()">전송</button>
+        </div>
+    </section>
+
+    <section class="share">
+        <h3>공유 기능</h3>
+        <button onclick="shareLink()">링크 복사하기</button>
+    </section>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+    <script>
+        // TODO: 여기에 본인 firebaseConfig 설정 입력
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        function showCalendar() {
+            const calendar = document.getElementById('calendar');
+            calendar.style.display = 'block';
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (text !== '') {
+                database.ref('messages').push({
+                    message: text,
+                    timestamp: Date.now()
+                });
+                input.value = '';
+            }
+        }
+
+        function shareLink() {
+            navigator.clipboard.writeText(window.location.href)
+            .then(() => alert('\uacf5유 \ub9c1크가 \ubcf5사되었습니다!'))
+            .catch(err => alert('Error: ' + err));
+        }
+
+        const chatbox = document.getElementById('chatbox');
+        database.ref('messages').on('child_added', (snapshot) => {
+            const msg = snapshot.val();
+            const div = document.createElement('div');
+
+            // URL이면 링크 또는 이미지로 표시
+            if (msg.message.startsWith('http')) {
+                if (msg.message.match(/\.(jpeg|jpg|gif|png)$/)) {
+                    const img = document.createElement('img');
+                    img.src = msg.message;
+                    div.appendChild(img);
+                } else {
+                    const link = document.createElement('a');
+                    link.href = msg.message;
+                    link.target = '_blank';
+                    link.textContent = msg.message;
+                    div.appendChild(link);
+                }
+            } else {
+                div.textContent = msg.message;
+            }
+
+            chatbox.appendChild(div);
+            chatbox.scrollTop = chatbox.scrollHeight;
+        });
+    </script>
+</body>
+</html>
